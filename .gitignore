@@ -1,1 +1,10 @@
 .DS_Store
+infrastructure/terraform.tfvars
+infrastructure/.terraform/
+infrastructure/.terraform.lock.hcl
+infrastructure/terraform.tfstate
+infrastructure/terraform.tfstate.backup
+infrastructure/*.tfstate
+.terraform.lock.hcl
+.terraform/
+.ssh/

@@ -1,0 +1,15 @@
+project_id            = "your-gcp-project-id"
+region                = "us-central1"
+zone                  = "us-central1-b"
+instance_name         = "fusionnet-dlvm"
+machine_type          = "n1-standard-8"
+boot_disk_size_gb     = 200
+dl_image_family       = "pytorch-2-7-cu128-ubuntu-2204-nvidia-570"
+dl_image_project      = "deeplearning-platform-release"
+ssh_key_name          = "gcp_dlvm"
+ssh_username          = "ubuntu"
+metadata_startup_script = <<-EOT
+#!/bin/bash
+echo "Deep Learning VM ready" > /var/tmp/startup.log
+EOT
+
