@@ -4,6 +4,10 @@ provider "google" {
   zone    = var.zone
 }
 
+data "google_compute_default_service_account" "default" {
+  project = var.project_id
+}
+
 data "google_compute_image" "deep_learning_pytorch" {
   project = var.dl_image_project
   family  = var.dl_image_family
@@ -89,6 +93,8 @@ resource "google_compute_instance" "dlvm" {
   }
 
   service_account {
+    email = data.google_compute_default_service_account.default.email
+
     scopes = [
       "https://www.googleapis.com/auth/cloud-platform"
     ]
@@ -97,5 +103,19 @@ resource "google_compute_instance" "dlvm" {
   advanced_machine_features {
     threads_per_core = 2
   }
+}
+
+resource "google_storage_bucket" "artifact_bucket" {
+  name                        = var.bucket_name
+  location                    = var.bucket_location
+  storage_class               = "STANDARD"
+  uniform_bucket_level_access = true
+  force_destroy               = false
+}
+
+resource "google_storage_bucket_iam_member" "vm_bucket_access" {
+  bucket = google_storage_bucket.artifact_bucket.name
+  role   = "roles/storage.objectAdmin"
+  member = "serviceAccount:${data.google_compute_default_service_account.default.email}"
 }
 

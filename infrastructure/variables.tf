@@ -54,3 +54,13 @@ variable "metadata_startup_script" {
   default     = ""
 }
 
+variable "bucket_name" {
+  description = "Globally unique name for the Google Cloud Storage bucket."
+  type        = string
+}
+
+variable "bucket_location" {
+  description = "Location/region for the storage bucket (e.g., US, us-central1)."
+  type        = string
+}
+

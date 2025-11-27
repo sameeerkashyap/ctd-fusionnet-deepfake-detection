@@ -12,4 +12,6 @@ metadata_startup_script = <<-EOT
 #!/bin/bash
 echo "Deep Learning VM ready" > /var/tmp/startup.log
 EOT
+bucket_name           = "fusionnet-artifacts-123456"
+bucket_location       = "US"
 

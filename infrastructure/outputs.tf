@@ -29,3 +29,8 @@ output "ssh_command" {
   )
 }
 
+output "bucket_name" {
+  description = "Cloud Storage bucket created for the workload."
+  value       = google_storage_bucket.artifact_bucket.name
+}
+

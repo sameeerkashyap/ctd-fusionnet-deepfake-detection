@@ -17,13 +17,15 @@ Terraform configuration provisions a Deep Learning VM on Google Cloud with a Tes
    # edit terraform.tfvars with your project, region, etc.
    ```
    Use `gcloud compute images list --project=deeplearning-platform-release --filter="family:pytorch-*"` if you need to discover the latest PyTorch Deep Learning VM family and update `dl_image_family` accordingly.
-   > **Tip:** Ensure the `zone` you pick actually offers the `nvidia-tesla-t4` accelerator (e.g., `us-central1-b`, `us-west1-b`). Check availability with `gcloud compute accelerator-types list --zones <zone>`.
+   > **Tip:** Ensure the `zone` you pick actually offers the `nvidia-tesla-t4` accelerator (e.g., `us-central1-b`, `us-west1-b`). Check availability with `gcloud compute accelerator-types list --zones <zone>`. Bucket names must be globally unique; update `bucket_name` accordingly.
 2. Run Terraform pointing to that tfvars file (automatic when named `terraform.tfvars`):
    ```bash
    terraform init
    terraform plan
    terraform apply
    ```
+
+Terraform also provisions a Cloud Storage bucket and grants the VM’s default service account `roles/storage.objectAdmin`, so the instance can read/write objects without extra credential files.
 
 The SSH key pair is written to `../.ssh/<ssh_key_name>` (set in `terraform.tfvars`) and ignored by git. After apply, grab the ready-to-run SSH command:
 
