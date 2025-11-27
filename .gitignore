@@ -172,3 +172,4 @@ infrastructure/*.tfstate
 .terraform.lock.hcl
 .terraform/
 .ssh/
+checkpoints/
