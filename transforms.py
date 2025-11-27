@@ -14,7 +14,8 @@ def get_transforms(img_size=224, augmentation_config=None, is_train=True):
     Args:
         img_size: Target image size (default: 224)
         augmentation_config: Dictionary containing augmentation parameters.
-                           If None, uses default values.
+                           If only 'normalize' is provided, skips augmentations.
+                           If None or contains other augmentation params, uses defaults.
         is_train: If True, return training transforms with augmentation.
                   If False, return validation transforms (no augmentation)
 
@@ -53,7 +54,14 @@ def get_transforms(img_size=224, augmentation_config=None, is_train=True):
     else:
         config = default_config
 
-    if is_train:
+    # Check if only normalize is specified (skip augmentations)
+    skip_augmentations = (
+        augmentation_config is not None and
+        set(augmentation_config.keys()) == {'normalize'}
+    )
+
+    if is_train and not skip_augmentations:
+        # Training with augmentations
         return A.Compose([
             A.Resize(img_size, img_size),
             A.RandomResizedCrop(size=(img_size, img_size), scale=config['crop_scale']),
@@ -74,6 +82,7 @@ def get_transforms(img_size=224, augmentation_config=None, is_train=True):
             ToTensorV2()
         ], additional_targets={"noise": "image"})
     else:
+        # Validation transforms (or training without augmentations)
         return A.Compose([
             A.Resize(img_size, img_size),
             A.Normalize(mean=config['normalize']['mean'], std=config['normalize']['std']),
