@@ -1,0 +1,24 @@
+[project]
+name = "ctd-fusionnet-deepfake-detection"
+version = "0.1.0"
+description = "Environment for CTD FusionNet deepfake detection notebook"
+requires-python = ">=3.10,<3.11"
+dependencies = [
+    "torch",
+    "torchvision",
+    "torchaudio",
+    "timm",
+    "albumentations",
+    "opencv-python",
+    "pytorch-optimizer",
+    "scikit-learn",
+    "tqdm",
+    "matplotlib",
+    "seaborn",
+    "pandas",
+    "numpy",
+    "ipython",
+    "ipykernel",
+]
+
+
