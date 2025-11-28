@@ -91,7 +91,7 @@ class FusionNetCTD(nn.Module):
     Uses ConvNeXt, EfficientNet, and Swin Transformer with attention fusion.
     """
 
-    def __init__(self):
+    def __init__(self, spsl_model_name="vit_tiny_patch16_224"):
         super().__init__()
 
         # RGB branch - ConvNeXt Tiny for high-level features
@@ -104,9 +104,9 @@ class FusionNetCTD(nn.Module):
         # Noise branch - EfficientNet B0 for noise analysis
         self.noise_branch = NoiseBranchCTD()
 
-        # Spatial branch - Swin Tiny for spatial reasoning
+        # Spatial branch - Vision Transformer Tiny for spatial reasoning
         self.spsl_branch = timm.create_model(
-            "swin_tiny_patch4_window7_224",
+            spsl_model_name,
             pretrained=True,
             num_classes=0  # Remove classification head
         )
@@ -114,24 +114,27 @@ class FusionNetCTD(nn.Module):
         # Adaptive pooling to get fixed-size feature vectors
         self.pool = nn.AdaptiveAvgPool2d(1)
 
-        # Projection layers to common dimension (384)
+        # Determine projection dimension from the spatial model
+        projection_dim = self.spsl_branch.num_features
+
+        # Projection layers to common dimension
         rgb_channels = self.rgb_branch.feature_info[-1]['num_chs']
         noise_channels = self.noise_branch.backbone.feature_info[-1]['num_chs']
         spsl_features = self.spsl_branch.num_features
 
-        self.rgb_proj = nn.Linear(rgb_channels, 384)
-        self.noise_proj = nn.Linear(noise_channels, 384)
-        self.spsl_proj = nn.Linear(spsl_features, 384)
+        self.rgb_proj = nn.Linear(rgb_channels, projection_dim)
+        self.noise_proj = nn.Linear(noise_channels, projection_dim)
+        self.spsl_proj = nn.Linear(spsl_features, projection_dim)
 
         # Attention fusion
-        self.attn = AttentionFusion(384)
+        self.attn = AttentionFusion(projection_dim)
 
         # Classification head
         self.head = nn.Sequential(
-            nn.Linear(384 * 3, 384),  # Concatenated features
+            nn.Linear(projection_dim * 3, projection_dim),  # Concatenated features
             nn.ReLU(inplace=True),
             nn.Dropout(0.25),
-            nn.Linear(384, 96),
+            nn.Linear(projection_dim, 96),
             nn.ReLU(inplace=True),
             nn.Linear(96, 2)  # Binary classification
         )
@@ -158,12 +161,12 @@ class FusionNetCTD(nn.Module):
         spsl_vec = self.spsl_branch(swin_in)  # (B, spsl_features)
 
         # Project all features to common dimension
-        rgb_vec = self.rgb_proj(rgb_vec)      # (B, 384)
-        noise_vec = self.noise_proj(noise_vec)  # (B, 384)
-        spsl_vec = self.spsl_proj(spsl_vec)    # (B, 384)
+        rgb_vec = self.rgb_proj(rgb_vec)      # (B, projection_dim)
+        noise_vec = self.noise_proj(noise_vec)  # (B, projection_dim)
+        spsl_vec = self.spsl_proj(spsl_vec)    # (B, projection_dim)
 
         # Apply attention fusion to RGB and noise features
-        rgb_attn = self.attn(rgb_vec, noise_vec)  # (B, 384)
+        rgb_attn = self.attn(rgb_vec, noise_vec)  # (B, projection_dim)
 
         # Concatenate all features
         fused = torch.cat([rgb_attn, noise_vec, spsl_vec], dim=1)  # (B, 1152)
