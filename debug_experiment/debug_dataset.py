@@ -57,4 +57,11 @@ class DebugDataset(Dataset):
         else:
             img_tensor = torch.from_numpy(img_rgb).permute(2, 0, 1).float()
 
-        return img_tensor, torch.tensor(self.labels[idx]).long()
+        # Create label tensor (0 for Real, 1 for Fake)
+        label = self.labels[idx]
+        # Validate label is 0 or 1
+        if label not in [0, 1]:
+            raise ValueError(f"Invalid label {label} at index {idx}. Expected 0 or 1.")
+        
+        # Return as long tensor (standard for classification labels)
+        return img_tensor, torch.tensor(label, dtype=torch.long)

@@ -53,7 +53,7 @@ CONFIG = {
     'weight_decay': 1e-4,
 
     # Device
-    'device': 'cuda' if torch.cuda.is_available() else 'cpu',
+    'device': 'mps' if torch.backends.mps.is_available() else ('cuda' if torch.cuda.is_available() else 'cpu'),
 
     # Model saving
     'save_dir': 'checkpoints',

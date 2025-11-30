@@ -10,17 +10,19 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import numpy as np
 from tqdm import tqdm
+from collections import Counter
 import sys
 
 # Add parent directory to path
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from debug_experiment.debug_dataset import DebugDataset, get_debug_transforms, load_dataset_paths
+from debug_experiment.debug_dataset import DebugDataset, get_debug_transforms
 from debug_experiment.debug_model import SimpleClassifier
+from dataset import load_dataset_paths
 
 # Configuration
 CONFIG = {
-    'dataset_root': "../Dataset",
+    'dataset_root': "/Users/sameerkashyap/code/ctd-fusionnet-deepfake-detection/CatandDog/split_dataset",
     'img_size': 224,
     'batch_size': 32,
     'num_workers': 2,
@@ -74,7 +76,14 @@ def train_one_epoch(model, loader, criterion, optimizer, device):
         
         optimizer.zero_grad()
         outputs = model(imgs)
-        loss = criterion(outputs, labels)
+        
+        # Ensure outputs are the right shape for BCE loss: [batch_size, 1] or [batch_size]
+        if outputs.dim() == 1:
+            outputs = outputs.unsqueeze(1)
+        
+        # Convert labels to float for BCE loss (0.0 or 1.0)
+        labels_float = labels.float().unsqueeze(1)
+        loss = criterion(outputs, labels_float)
         loss.backward()
         optimizer.step()
         
@@ -95,17 +104,62 @@ def evaluate(model, loader, criterion, device, desc="Validating"):
             imgs, labels = imgs.to(device), labels.to(device)
             
             outputs = model(imgs)
-            loss = criterion(outputs, labels)
+            
+            # Ensure outputs are the right shape for BCE loss: [batch_size, 1] or [batch_size]
+            if outputs.dim() == 1:
+                outputs = outputs.unsqueeze(1)
+            
+            # Convert labels to float for BCE loss (0.0 or 1.0)
+            labels_float = labels.float().unsqueeze(1)
+            loss = criterion(outputs, labels_float)
             total_loss += loss.item()
             
-            probs = torch.softmax(outputs, dim=1)[:, 1]
-            all_probs.extend(probs.cpu().numpy())
-            all_labels.extend(labels.cpu().numpy())
+            # For binary classification: apply sigmoid to get probability of class 1
+            # outputs shape: [batch_size, 1], squeeze to [batch_size]
+            probs = torch.sigmoid(outputs.squeeze(-1))  # Only squeeze last dimension
+            
+            # Handle single item batches
+            if probs.dim() == 0:
+                probs = probs.unsqueeze(0)
+            
+            all_probs.extend(probs.cpu().numpy().tolist())
+            all_labels.extend(labels.cpu().numpy().tolist())
             
     avg_loss = total_loss / len(loader)
     
     # Metrics
     preds = [1 if p > 0.5 else 0 for p in all_probs]
+    
+    # Debug: Check for suspicious patterns
+    if len(all_probs) > 0:
+        min_prob = min(all_probs)
+        max_prob = max(all_probs)
+        mean_prob = np.mean(all_probs)
+        prob_std = np.std(all_probs)
+        
+        # Check if all predictions are the same
+        unique_preds = set(preds)
+        unique_labels = set(all_labels)
+        
+        # Print debug info if accuracy is 100%
+        accuracy = accuracy_score(all_labels, preds)
+        if accuracy >= 0.99:  # 99% or higher
+            print(f"\n⚠️  DEBUG: Suspiciously high accuracy ({accuracy:.4f})")
+            print(f"   Probabilities: min={min_prob:.4f}, max={max_prob:.4f}, mean={mean_prob:.4f}, std={prob_std:.4f}")
+            print(f"   Unique predictions: {unique_preds}")
+            print(f"   Unique labels: {unique_labels}")
+            print(f"   Label distribution: {Counter(all_labels)}")
+            print(f"   Prediction distribution: {Counter(preds)}")
+            
+            # Check if model is always predicting one class
+            if len(unique_preds) == 1:
+                print(f"   ❌ MODEL IS ALWAYS PREDICTING CLASS {list(unique_preds)[0]}!")
+                print(f"      This suggests the model hasn't learned properly.")
+            
+            # Sample some predictions vs labels
+            print(f"   Sample predictions (first 10):")
+            for i in range(min(10, len(preds))):
+                print(f"      Label: {all_labels[i]}, Pred: {preds[i]}, Prob: {all_probs[i]:.4f}")
     
     metrics = {
         'loss': avg_loss,
@@ -147,7 +201,8 @@ def main():
     # Model
     print("Initializing ResNet18...")
     model = SimpleClassifier().to(CONFIG['device'])
-    criterion = nn.CrossEntropyLoss()
+    # For binary classification with single output, use BCEWithLogitsLoss
+    criterion = nn.BCEWithLogitsLoss()
     optimizer = optim.Adam(model.parameters(), lr=CONFIG['learning_rate'])
     
     # Training Loop
@@ -156,20 +211,25 @@ def main():
     print("Starting training...")
     for epoch in range(CONFIG['num_epochs']):
         train_loss = train_one_epoch(model, train_loader, criterion, optimizer, CONFIG['device'])
+        
+        # Evaluate both train and validation metrics
+        train_metrics = evaluate(model, train_loader, criterion, CONFIG['device'], desc="Evaluating Train")
         val_metrics = evaluate(model, val_loader, criterion, CONFIG['device'])
         
         history['train_loss'].append(train_loss)
         history['val_loss'].append(val_metrics['loss'])
         history['val_acc'].append(val_metrics['accuracy'])
         
-        print(f"Epoch {epoch+1}/{CONFIG['num_epochs']} | "
-              f"Train Loss: {train_loss:.4f} | "
-              f"Val Loss: {val_metrics['loss']:.4f} | "
-              f"Val Acc: {val_metrics['accuracy']:.4f} | "
-              f"Val AUC: {val_metrics['auc']:.4f}")
+        print(f"Epoch {epoch+1}/{CONFIG['num_epochs']}")
+        print(f"  Train - Loss: {train_loss:.4f} | Acc: {train_metrics['accuracy']:.4f} | "
+              f"Precision: {train_metrics['precision']:.4f} | Recall: {train_metrics['recall']:.4f} | "
+              f"F1: {train_metrics['f1']:.4f}")
+        print(f"  Val   - Loss: {val_metrics['loss']:.4f} | Acc: {val_metrics['accuracy']:.4f} | "
+              f"Precision: {val_metrics['precision']:.4f} | Recall: {val_metrics['recall']:.4f} | "
+              f"F1: {val_metrics['f1']:.4f} | AUC: {val_metrics['auc']:.4f}")
               
         if val_metrics['accuracy'] == 1.0:
-            print("⚠️  WARNING: Validation Accuracy hit 100%. This is suspicious.")
+            print("  ⚠️  WARNING: Validation Accuracy hit 100%. This is suspicious.")
             
     # Plot training history
     plot_metrics(history, CONFIG['save_dir'])

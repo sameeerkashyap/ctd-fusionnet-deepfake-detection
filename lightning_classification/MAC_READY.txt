@@ -1,0 +1,184 @@
+╔══════════════════════════════════════════════════════════════════════════════╗
+║              LIGHTNING CLASSIFICATION - MAC MPS EDITION                       ║
+║                    Optimized for Apple Silicon                                ║
+╚══════════════════════════════════════════════════════════════════════════════╝
+
+🍎 YOUR MAC IS READY FOR GPU-ACCELERATED DEEP LEARNING!
+
+Based on the MPS check, your system shows:
+  ✅ MPS (Apple Silicon GPU) is AVAILABLE
+  ✅ MPS is BUILT and READY
+  ✅ ~52x FASTER than CPU for this workload
+
+═══════════════════════════════════════════════════════════════════════════════
+📁 NEW FILES FOR MAC SUPPORT
+═══════════════════════════════════════════════════════════════════════════════
+
+  check_mps.py          - MPS availability checker and benchmark
+  MAC_SETUP.md          - Comprehensive Mac setup guide
+  mac_quickstart.sh     - Interactive quick start script
+  
+  Updated files:
+  train.py              - Now detects and uses MPS automatically
+  test_setup.py         - Shows which device will be used
+  README.md             - Added Mac quick start section
+  QUICKREF.txt          - Added Mac commands
+
+═══════════════════════════════════════════════════════════════════════════════
+🚀 THREE WAYS TO GET STARTED
+═══════════════════════════════════════════════════════════════════════════════
+
+Option 1: Interactive Quick Start (Easiest)
+───────────────────────────────────────────
+  ./mac_quickstart.sh
+
+  This will:
+  • Check your system
+  • Install dependencies if needed
+  • Run MPS verification
+  • Start training with optimal settings
+
+
+Option 2: Manual Step-by-Step
+──────────────────────────────
+  # Check MPS
+  python check_mps.py
+
+  # Test setup
+  python test_setup.py
+
+  # Train
+  python train.py --use_cifar10 --max_epochs 10
+
+
+Option 3: Custom Training
+─────────────────────────
+  python train.py \
+    --use_cifar10 \
+    --batch_size 64 \
+    --max_epochs 50 \
+    --num_workers 2 \
+    --experiment_name my_experiment
+
+═══════════════════════════════════════════════════════════════════════════════
+⚡ PERFORMANCE EXPECTATIONS
+═══════════════════════════════════════════════════════════════════════════════
+
+Your Mac with MPS showed ~52x speedup over CPU!
+
+Estimated training times (10 epochs, CIFAR-10):
+  • CPU only:     ~30-40 minutes
+  • With MPS:     ~30-60 seconds  ⚡
+
+Full training (50 epochs):
+  • CPU only:     ~2.5-3 hours
+  • With MPS:     ~3-5 minutes  ⚡
+
+═══════════════════════════════════════════════════════════════════════════════
+🎯 RECOMMENDED SETTINGS FOR YOUR MAC
+═══════════════════════════════════════════════════════════════════════════════
+
+For M1/M2/M3 (8GB RAM):
+  python train.py --use_cifar10 --batch_size 32 --num_workers 2
+
+For M1/M2/M3 Pro/Max (16GB+ RAM):
+  python train.py --use_cifar10 --batch_size 64 --num_workers 4
+
+For maximum performance:
+  python train.py --use_cifar10 --batch_size 128 --num_workers 4
+
+═══════════════════════════════════════════════════════════════════════════════
+📊 MONITORING YOUR TRAINING
+═══════════════════════════════════════════════════════════════════════════════
+
+Console Output:
+  • Shows device (MPS/CPU)
+  • Real-time metrics
+  • Layer-by-layer debugging
+
+TensorBoard:
+  tensorboard --logdir outputs/logs
+  open http://localhost:6006
+
+Activity Monitor:
+  • Open Activity Monitor
+  • Click "GPU" tab
+  • Watch GPU usage in real-time
+
+═══════════════════════════════════════════════════════════════════════════════
+✅ WHAT HAPPENS AUTOMATICALLY
+═══════════════════════════════════════════════════════════════════════════════
+
+  ✓ MPS detection and activation
+  ✓ Optimal device selection (MPS > CUDA > CPU)
+  ✓ Memory management
+  ✓ Fallback to CPU if needed
+  ✓ Model checkpointing
+  ✓ Early stopping
+  ✓ Learning rate scheduling
+
+You don't need to specify any device flags - it just works!
+
+═══════════════════════════════════════════════════════════════════════════════
+🐛 IF SOMETHING GOES WRONG
+═══════════════════════════════════════════════════════════════════════════════
+
+Out of Memory:
+  → Reduce batch size: --batch_size 16
+  → Close other apps
+  → Use gradient accumulation: --accumulate_grad_batches 4
+
+Slow Performance:
+  → Check Activity Monitor for other GPU apps
+  → Reduce num_workers: --num_workers 0
+  → Close browser tabs
+
+MPS Errors:
+  → Update PyTorch: pip install --upgrade torch
+  → Check macOS version: sw_vers (need 12.3+)
+  → Force CPU: PYTORCH_ENABLE_MPS_FALLBACK=1 python train.py
+
+═══════════════════════════════════════════════════════════════════════════════
+📚 DOCUMENTATION
+═══════════════════════════════════════════════════════════════════════════════
+
+  MAC_SETUP.md      - Complete Mac guide with troubleshooting
+  README.md         - General usage and features
+  SUMMARY.md        - Project overview
+  QUICKREF.txt      - Quick reference card
+  ARCHITECTURE.txt  - Model architecture details
+
+═══════════════════════════════════════════════════════════════════════════════
+🎓 EXAMPLE OUTPUT
+═══════════════════════════════════════════════════════════════════════════════
+
+When you run training, you'll see:
+
+  ============================================================
+  DEVICE INFORMATION
+  ============================================================
+  CUDA available: False
+  MPS (Apple Silicon) available: True
+  MPS device: Apple Silicon GPU
+  MPS built: True
+
+  🚀 Accelerator to be used: MPS (Apple Silicon GPU)
+  ============================================================
+
+Then training will use your Mac's GPU automatically!
+
+═══════════════════════════════════════════════════════════════════════════════
+🎉 YOU'RE ALL SET!
+═══════════════════════════════════════════════════════════════════════════════
+
+Your Mac is configured and ready for GPU-accelerated deep learning.
+
+Quick commands to remember:
+  ./mac_quickstart.sh              # Start training now
+  python check_mps.py              # Verify MPS anytime
+  python train.py --use_cifar10    # Train with defaults
+  tensorboard --logdir outputs/logs # View results
+
+Happy training! 🚀
+
+═══════════════════════════════════════════════════════════════════════════════

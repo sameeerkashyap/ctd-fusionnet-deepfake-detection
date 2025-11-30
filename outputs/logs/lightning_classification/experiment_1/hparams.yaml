@@ -1,0 +1,4 @@
+dropout_rate: 0.5
+input_channels: 3
+learning_rate: 0.001
+num_classes: 10
