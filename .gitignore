@@ -3,8 +3,15 @@ __pycache__/
 *.py[cod]
 *$py.class
 
+ddata/
+outputs/
+catdog/
+catdog_backup/
+lightning_logs/
+data/
 # C extensions
 *.so
+checkpoints-inverted/
 
 # Distribution / packaging
 .Python

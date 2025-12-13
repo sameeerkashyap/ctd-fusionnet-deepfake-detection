@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CTD FusionNet</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f4f4f9;
+            color: #333;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            padding: 2rem;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            text-align: center;
+            max-width: 800px;
+            width: 100%;
+        }
+
+        h1 {
+            margin-bottom: 1.5rem;
+            color: #2c3e50;
+        }
+
+        .drop-zone {
+            border: 2px dashed #3498db;
+            border-radius: 10px;
+            padding: 2rem;
+            cursor: pointer;
+            transition: background-color 0.3s, border-color 0.3s;
+            margin-bottom: 1.5rem;
+        }
+
+        .drop-zone:hover,
+        .drop-zone.dragover {
+            background-color: #ecf0f1;
+            border-color: #2980b9;
+        }
+
+        .drop-zone p {
+            margin: 0;
+            color: #7f8c8d;
+        }
+
+        #file-input {
+            display: none;
+        }
+
+        #preview {
+            max-width: 100%;
+            max-height: 300px;
+            border-radius: 5px;
+            margin-top: 1rem;
+            display: none;
+        }
+
+        .result {
+            margin-top: 1.5rem;
+            display: none;
+        }
+
+        .result h2 {
+            font-size: 1.5rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .real {
+            color: #27ae60;
+        }
+
+        .fake {
+            color: #c0392b;
+        }
+
+        .confidence {
+            font-size: 1rem;
+            color: #7f8c8d;
+        }
+
+        .loading {
+            display: none;
+            margin-top: 1rem;
+            color: #3498db;
+            font-weight: bold;
+        }
+
+        .bar-container {
+            width: 100%;
+            background-color: #e0e0e0;
+            border-radius: 5px;
+            margin-top: 10px;
+            height: 20px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .bar {
+            height: 100%;
+            border-radius: 5px;
+            transition: width 0.5s ease;
+        }
+
+        .bar-real {
+            background-color: #27ae60;
+        }
+
+        .bar-fake {
+            background-color: #c0392b;
+        }
+
+        .shap-container {
+            margin-top: 30px;
+            border-top: 1px solid #eee;
+            padding-top: 20px;
+            display: none;
+            /* Hidden by default */
+        }
+
+        .shap-image {
+            max-width: 100%;
+            border-radius: 5px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .explain-btn {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 1rem;
+            margin-top: 20px;
+            transition: background-color 0.3s;
+        }
+
+        .explain-btn:hover {
+            background-color: #2980b9;
+        }
+
+        .explain-loader {
+            display: none;
+            margin-top: 15px;
+            color: #e67e22;
+            font-style: italic;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>CTD FusionNet</h1>
+        <div class="drop-zone" id="drop-zone">
+            <p>Drag & Drop an image here or click to select</p>
+            <input type="file" id="file-input" accept="image/*">
+            <img id="preview" alt="Image Preview">
+        </div>
+
+        <div class="loading" id="loading">Analyzing image...</div>
+
+        <div class="result" id="result">
+            <h2 id="prediction-text"></h2>
+            <p class="confidence" id="confidence-text"></p>
+
+            <div style="margin-top: 20px; text-align: left;">
+                <label>Real Probability:</label>
+                <div class="bar-container">
+                    <div id="bar-real" class="bar bar-real" style="width: 0%"></div>
+                </div>
+                <div id="prob-real" style="text-align: right; font-size: 0.8em;">0%</div>
+
+                <label>Fake Probability:</label>
+                <div class="bar-container">
+                    <div id="bar-fake" class="bar bar-fake" style="width: 0%"></div>
+                </div>
+                <div id="prob-fake" style="text-align: right; font-size: 0.8em;">0%</div>
+            </div>
+
+            <button id="explain-btn" class="explain-btn">Explain Decision with SHAP</button>
+            <div id="explain-loader" class="explain-loader">Generating explanation (this may take 10-20 seconds)...
+            </div>
+
+            <div class="shap-container" id="shap-container">
+                <h3>Feature Importance (SHAP)</h3>
+                <p style="font-size: 0.9em; color: #666; margin-bottom: 15px;">
+                    Red pixels increase the probability of the predicted class, while blue pixels decrease it.
+                </p>
+                <img id="shap-image" class="shap-image" alt="SHAP Explanation">
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const dropZone = document.getElementById('drop-zone');
+        const fileInput = document.getElementById('file-input');
+        const preview = document.getElementById('preview');
+        const resultDiv = document.getElementById('result');
+        const loadingDiv = document.getElementById('loading');
+        const predictionText = document.getElementById('prediction-text');
+        const confidenceText = document.getElementById('confidence-text');
+        const barReal = document.getElementById('bar-real');
+        const barFake = document.getElementById('bar-fake');
+        const probReal = document.getElementById('prob-real');
+        const probFake = document.getElementById('prob-fake');
+
+        const explainBtn = document.getElementById('explain-btn');
+        const explainLoader = document.getElementById('explain-loader');
+        const shapContainer = document.getElementById('shap-container');
+        const shapImage = document.getElementById('shap-image');
+
+        let currentFile = null;
+
+        dropZone.addEventListener('click', () => fileInput.click());
+
+        dropZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropZone.classList.add('dragover');
+        });
+
+        dropZone.addEventListener('dragleave', () => {
+            dropZone.classList.remove('dragover');
+        });
+
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('dragover');
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                handleFile(files[0]);
+            }
+        });
+
+        fileInput.addEventListener('change', () => {
+            if (fileInput.files.length > 0) {
+                handleFile(fileInput.files[0]);
+            }
+        });
+
+        explainBtn.addEventListener('click', () => {
+            if (currentFile) {
+                generateExplanation(currentFile);
+            }
+        });
+
+        function handleFile(file) {
+            if (!file.type.startsWith('image/')) {
+                alert('Please upload an image file.');
+                return;
+            }
+
+            currentFile = file;
+
+            // Show preview
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                preview.src = e.target.result;
+                preview.style.display = 'block';
+            };
+            reader.readAsDataURL(file);
+
+            // Reset UI
+            resultDiv.style.display = 'none';
+            shapContainer.style.display = 'none';
+            explainBtn.style.display = 'inline-block'; // Show button again
+            loadingDiv.style.display = 'block';
+
+            // Upload and predict
+            const formData = new FormData();
+            formData.append('file', file);
+
+            fetch('/predict', {
+                method: 'POST',
+                body: formData
+            })
+                .then(response => response.json())
+                .then(data => {
+                    loadingDiv.style.display = 'none';
+                    if (data.error) {
+                        alert('Error: ' + data.error);
+                        return;
+                    }
+                    showResult(data);
+                })
+                .catch(err => {
+                    loadingDiv.style.display = 'none';
+                    alert('Error connecting to server.');
+                    console.error(err);
+                });
+        }
+
+        function showResult(data) {
+            resultDiv.style.display = 'block';
+
+            predictionText.textContent = data.prediction;
+            predictionText.className = data.prediction === 'REAL' ? 'real' : 'fake';
+
+            confidenceText.textContent = `Confidence: ${(data.confidence * 100).toFixed(2)}%`;
+
+            const realPct = (data.probabilities.real * 100).toFixed(2);
+            const fakePct = (data.probabilities.fake * 100).toFixed(2);
+
+            barReal.style.width = `${realPct}%`;
+            barFake.style.width = `${fakePct}%`;
+
+            probReal.textContent = `${realPct}%`;
+            probFake.textContent = `${fakePct}%`;
+        }
+
+        function generateExplanation(file) {
+            explainBtn.style.display = 'none';
+            explainLoader.style.display = 'block';
+            shapContainer.style.display = 'none';
+
+            const formData = new FormData();
+            formData.append('file', file);
+
+            fetch('/explain', {
+                method: 'POST',
+                body: formData
+            })
+                .then(response => response.json())
+                .then(data => {
+                    explainLoader.style.display = 'none';
+                    if (data.error) {
+                        alert('Error generating explanation: ' + data.error);
+                        explainBtn.style.display = 'inline-block';
+                        return;
+                    }
+                    showExplanation(data);
+                })
+                .catch(err => {
+                    explainLoader.style.display = 'none';
+                    explainBtn.style.display = 'inline-block';
+                    alert('Error connecting to server for explanation.');
+                    console.error(err);
+                });
+        }
+
+        function showExplanation(data) {
+            if (data.shap_image) {
+                shapImage.src = 'data:image/png;base64,' + data.shap_image;
+                shapContainer.style.display = 'block';
+            }
+        }
+    </script>
+</body>
+
+</html>
